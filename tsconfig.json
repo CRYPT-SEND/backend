@@ -27,7 +27,8 @@
     "config.ts",
     "scripts",
     "eslint.config.ts",
-    "vitest.config.mts"
+    "vitest.config.mts",
+    "jest.config.ts",
   ],
   "exclude": [
     "src/public/*"
