@@ -29,6 +29,7 @@
     "eslint.config.ts",
     "vitest.config.mts",
     "jest.config.ts",
+    "jest.setup.ts"
   ],
   "exclude": [
     "src/public/*"
