@@ -15,10 +15,17 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "@types/web3": "^1.0.20",
+    "axios": "^1.11.0",
+    "bignumber.js": "^9.3.1",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "firebase": "^12.1.0",
+    "firebase-admin": "^13.4.0",
     "helmet": "^8.1.0",
     "inserturlparams": "^2.0.5",
     "jet-env": "^1.1.4",
@@ -27,7 +34,11 @@
     "jet-validators": "^1.4.3",
     "jsonfile": "^6.2.0",
     "module-alias": "^2.2.3",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "qrcode": "^1.5.4",
+    "speakeasy": "^2.0.0",
+    "web3": "^4.16.0",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
