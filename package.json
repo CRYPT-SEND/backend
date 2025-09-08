@@ -4,10 +4,10 @@
   "scripts": {
     "build": "ts-node ./scripts/build.ts",
     "clean-install": "rm -rf ./node_modules && rm -r package-lock.json && npm i",
-    "dev": "NODE_ENV=development ts-node ./src",
+    "dev": "cross-env NODE_ENV=development ts-node ./src",
     "dev:hot": "nodemon --exec \"npm run dev\" --watch ./src --ext .ts",
     "lint": "eslint .",
-    "start": "NODE_ENV=production node -r ./config.js ./dist",
+    "start": "cross-env NODE_ENV=production node -r ./config.js ./dist",
     "test": "vitest",
     "type-check": "tsc --noEmit"
   },
@@ -19,6 +19,7 @@
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
     "helmet": "^8.1.0",
     "inserturlparams": "^2.0.5",
     "jet-env": "^1.1.4",
@@ -27,12 +28,12 @@
     "jet-validators": "^1.4.3",
     "jsonfile": "^6.2.0",
     "module-alias": "^2.2.3",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
-    "@stylistic/eslint-plugin-js": "^4.4.1",
-    "@stylistic/eslint-plugin-ts": "^4.4.1",
+    "@stylistic/eslint-plugin": "^5.3.1",
     "@swc/core": "^1.13.4",
     "@types/cookie-parser": "^1.4.9",
     "@types/find": "^0.2.4",
@@ -43,6 +44,7 @@
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.3.0",
     "@types/supertest": "^6.0.3",
+    "cross-env": "^10.0.0",
     "eslint": "^9.33.0",
     "eslint-plugin-n": "^17.21.3",
     "find": "^0.3.0",

@@ -1,6 +1,7 @@
 // jest.setup.ts
 
 // IMPORTANT : Définir les variables d'environnement AVANT tout import
+// Utilisation de process.env ici est nécessaire pour la configuration des tests
 process.env.NODE_ENV = 'test';
 process.env.PORT = '3000';
 process.env.HOST = 'localhost';
@@ -11,6 +12,5 @@ process.env.JET_LOGGER_FORMAT = 'LINE';
 import dotenv from 'dotenv';
 
 // charge le .env (ou .env.test si tu préfères)
-dotenv.config({ path: ".env.test" });
-console.log(">>> JEST ENV:", process.env.PORT, process.env.NODE_ENV);
-// console.log(">>> JEST ENV raw:", JSON.stringify(process.env, null, 2));
+dotenv.config({ path: '.env.test' });
+// console.log('>>> JEST ENV:', process.env.PORT, process.env.NODE_ENV);
