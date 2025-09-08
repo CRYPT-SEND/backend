@@ -14,5 +14,5 @@ router.get('/admins/:adminId', adminManagementController.getAdminById);
 router.put('/admins/:adminId', adminManagementController.updateAdmin);
 router.delete('/admins/:adminId', adminManagementController.deleteAdmin);
 router.post('/admins/:adminId/reset-password', adminManagementController.resetAdminPassword);
-
+//
 export default router;
