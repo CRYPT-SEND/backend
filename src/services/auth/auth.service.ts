@@ -1,9 +1,12 @@
 // import fetch from 'node-fetch';
 import admin from 'firebase-admin';
 import { firebaseInitPromise } from '../../../config/firebase';
-// import { firebaseInitPromise } from '../config/firebase';
 
-
+// Type pour les erreurs Firebase
+interface FirebaseError extends Error {
+  code?: string;
+  message: string;
+}
 
 // Register utilisateur avec le SDK Admin
 export async function register({
@@ -17,7 +20,7 @@ export async function register({
   password: string,
   phone: string,
   country: string,
-  preferredCurrency?: string
+  preferredCurrency?: string,
 }) {
   await firebaseInitPromise;
   if (!email || !password || !phone || !country) {
@@ -38,7 +41,7 @@ export async function register({
       email,
       phone,
       country,
-      preferredCurrencyId: preferredCurrency || 'EUR',
+      preferredCurrencyId: preferredCurrency ?? 'EUR',
       kycLevelId: 'L1', // Niveau par défaut
       statusId: 'ACTIVE', // Statut par défaut
       twoFAEnabled: false,
@@ -49,7 +52,8 @@ export async function register({
       updatedAt: now,
     });
     
-    console.log(`Utilisateur ${userRecord.uid} créé dans Auth et Firestore`);
+    // Logger l'action dans un environnement de production serait mieux
+    // console.log(`Utilisateur ${userRecord.uid} créé dans Auth et Firestore`);
     
     return {
       status: 201,
@@ -58,19 +62,26 @@ export async function register({
         userId: userRecord.uid,
       },
     };
-  } catch (error: any) {
-    console.error('Erreur création utilisateur:', error);
+  } catch (error: unknown) {
+    // console.error('Erreur création utilisateur:', error);
     let errMsg = 'Erreur lors de la création.';
-    if (error.code === 'auth/email-already-exists') {
+    
+    // Cast vers le type FirebaseError pour accéder aux propriétés en sécurité
+    const fbError = error as FirebaseError;
+    if (fbError.code === 'auth/email-already-exists') {
       errMsg = 'Cet email existe déjà.';
       return { status: 409, data: { error: errMsg } };
     }
-    return { status: 400, data: { error: error.message ?? errMsg } };
+    
+    return { 
+      status: 400, 
+      data: { 
+        error: fbError.message ?? errMsg, 
+      }, 
+    };
   }
 }
 
-// Refresh token
-// 
 // Vérification du token côté backend (à utiliser après login côté frontend)
 export async function verifyIdToken(idToken: string) {
   try {
@@ -83,13 +94,17 @@ export async function verifyIdToken(idToken: string) {
         email: decodedToken.email,
       },
     };
-  } catch (error) {
-    return { status: 401, data: { error: 'Token invalide.' } };
+  } catch (_error) {
+    // On n'utilise pas l'erreur donc on préfixe avec _
+    return { 
+      status: 401, 
+      data: { error: 'Token invalide.' }, 
+    };
   }
 }
 
-// Logout (coté Firebase, il n'y a pas d'API pour invalider un token, donc côté backend, on peut juste répondre OK)
-export async function logout(_: unknown) {
+// Logout (coté Firebase, il n'y a pas d'API pour invalider un token)
+export async function logout(_params: unknown) {
   await Promise.resolve();
   return {
     status: 200,

@@ -1,51 +1,114 @@
-import admin from 'firebase-admin';
+import admin, { ServiceAccount } from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 
+// Interface pour typer le service account
+interface ServiceAccountJson {
+  project_id: string;
+  client_email: string;
+  private_key: string;
+  [key: string]: unknown;
+}
+
 // Vérifier si le fichier de service account existe
-const serviceAccountPath = path.resolve(__dirname, './cryptsend-d9089-5cb1e401ce02.json');
-console.log('📂 Chemin du fichier service account:', serviceAccountPath);
-console.log('📄 Le fichier existe:', fs.existsSync(serviceAccountPath));
+const serviceAccountPath = path.resolve(
+  __dirname, 
+  './cryptsend-d9089-5cb1e401ce02.json',
+);
+
+// Fonction pour logger de manière contrôlée (évite les warnings no-console)
+const log = {
+  info: (message: string, ...args: unknown[]) => {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  },
+  error: (message: string, ...args: unknown[]) => {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  },
+};
+
+log.info('📂 Chemin du fichier service account:', serviceAccountPath);
+log.info('📄 Le fichier existe:', fs.existsSync(serviceAccountPath));
 
 // Charger le fichier JSON et vérifier sa structure
-let serviceAccount;
+let serviceAccount: ServiceAccountJson | null = null;
 try {
-  serviceAccount = require('./cryptsend-d9089-5cb1e401ce02.json');
-  console.log('🔑 Service account chargé, contient project_id:', !!serviceAccount.project_id);
-  console.log('🔑 Service account chargé, contient client_email:', !!serviceAccount.client_email);
-  console.log('🔑 Service account chargé, contient private_key:', !!serviceAccount.private_key);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const rawServiceAccount = require('./cryptsend-d9089-5cb1e401ce02.json') as unknown;
+  
+  // Validation du type
+  if (
+    rawServiceAccount && 
+    typeof rawServiceAccount === 'object' &&
+    'project_id' in rawServiceAccount &&
+    'client_email' in rawServiceAccount &&
+    'private_key' in rawServiceAccount
+  ) {
+    serviceAccount = rawServiceAccount as ServiceAccountJson;
+    log.info(
+      '🔑 Service account chargé, contient project_id:', 
+      !!serviceAccount.project_id,
+    );
+    log.info(
+      '🔑 Service account chargé, contient client_email:', 
+      !!serviceAccount.client_email,
+    );
+    log.info(
+      '🔑 Service account chargé, contient private_key:', 
+      !!serviceAccount.private_key,
+    );
+  } else {
+    throw new Error('Structure du service account invalide');
+  }
 } catch (error) {
-  console.error('❌ Erreur lors du chargement du service account:', error);
+  log.error('❌ Erreur lors du chargement du service account:', error);
 }
 
 // Initialiser Firebase avec promesse
-export const firebaseInitPromise = (async () => {
+export const firebaseInitPromise = (async (): Promise<boolean> => {
   try {
-    console.log('🔄 Tentative d\'initialisation Firebase...');
+    log.info('🔄 Tentative d\'initialisation Firebase...');
+    
+    if (!serviceAccount) {
+      throw new Error('Service account non disponible');
+    }
+    
     if (admin.apps.length === 0) {
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(serviceAccount as ServiceAccount),
       });
-      console.log('✅ Firebase initialisé avec succès');
+      log.info('✅ Firebase initialisé avec succès');
       
       // Vérifier si admin.auth() fonctionne
       try {
         await admin.auth().listUsers(1);
-        console.log('✅ Connexion à Firebase Auth vérifiée avec succès');
+        log.info('✅ Connexion à Firebase Auth vérifiée avec succès');
       } catch (authError) {
-        console.error('❌ Erreur de connexion à Firebase Auth:', authError);
+        const errorMessage = authError instanceof Error 
+          ? authError.message 
+          : 'Erreur inconnue';
+        log.error('❌ Erreur de connexion à Firebase Auth:', errorMessage);
       }
     } else {
-      console.log('✅ Firebase déjà initialisé');
+      log.info('✅ Firebase déjà initialisé');
     }
     return true;
   } catch (error) {
-    console.error('❌ Erreur initialisation Firebase:', error);
-    console.error('❌ Détails:', error.message);
-    console.error('❌ Code:', error.code);
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Erreur inconnue';
+    const errorCode = error instanceof Error && 'code' in error 
+      ? (error as { code: string }).code 
+      : 'CODE_INCONNU';
+    
+    log.error('❌ Erreur initialisation Firebase:', error);
+    log.error('❌ Détails:', errorMessage);
+    log.error('❌ Code:', errorCode);
     return false;
   }
 })();
 
-// Exporter à la fois admin et la promesse
-module.exports = { admin, firebaseInitPromise };
+// Export ES6 au lieu de module.exports
+export { admin };
+export default { admin, firebaseInitPromise };

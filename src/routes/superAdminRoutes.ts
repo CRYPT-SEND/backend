@@ -1,5 +1,6 @@
 import express from 'express';
-import * as adminManagementController from '../controllers/superAdminController';
+import * as adminManagementController 
+  from '../controllers/superAdminController';
 
 const router = express.Router();
 
