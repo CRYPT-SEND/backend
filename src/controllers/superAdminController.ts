@@ -83,8 +83,8 @@ export async function superAdminAuthMiddleware(
     req.admin = decodedToken;
     req.adminData = userData;
     next();
-  } catch (_err) {
-    // console.error('Erreur auth super admin:', _err);
+  } catch {
+    // Bloc catch sans capturer l'erreur
     return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
 }
@@ -184,8 +184,7 @@ export async function getAllAdmins(req: Request, res: Response) {
     });
     
     return res.status(200).json(admins);
-  } catch (_err) {
-    // console.error('Erreur récupération admins:', _err);
+  } catch {
     return res.status(500).json({ 
       error: 'Erreur lors de la récupération des administrateurs', 
     });
@@ -210,8 +209,7 @@ export async function getAdminById(req: Request, res: Response) {
     
     const data = adminDoc.data();
     return res.status(200).json({ id: adminDoc.id, ...data });
-  } catch (_err) {
-    // console.error('Erreur récupération admin:', _err);
+  } catch {
     return res.status(500).json({ 
       error: 'Erreur lors de la récupération de l\'administrateur', 
     });
@@ -270,8 +268,7 @@ export async function updateAdmin(req: SuperAdminRequest, res: Response) {
     return res.status(200).json({ 
       message: 'Administrateur mis à jour avec succès', 
     });
-  } catch (_err) {
-    // console.error('Erreur mise à jour admin:', _err);
+  } catch {
     return res.status(500).json({ 
       error: 'Erreur lors de la mise à jour de l\'administrateur', 
     });
@@ -311,8 +308,7 @@ export async function deleteAdmin(req: SuperAdminRequest, res: Response) {
     return res.status(200).json({ 
       message: 'Administrateur supprimé avec succès', 
     });
-  } catch (_err) {
-    // console.error('Erreur suppression admin:', _err);
+  } catch {
     return res.status(500).json({ 
       error: 'Erreur lors de la suppression de l\'administrateur', 
     });
@@ -353,8 +349,7 @@ export async function resetAdminPassword(
     return res.status(200).json({ 
       message: 'Mot de passe réinitialisé avec succès', 
     });
-  } catch (_err) {
-    // console.error('Erreur réinitialisation mot de passe:', _err);
+  } catch {
     return res.status(500).json({ 
       error: 'Erreur lors de la réinitialisation du mot de passe', 
     });

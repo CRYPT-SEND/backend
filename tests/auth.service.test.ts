@@ -132,9 +132,9 @@ describe('AuthService', () => {
     it('should register successfully with valid data', async () => {
       console.log('Starting successful registration test');
       const result = await AuthService.register({
-        email: 'new@example.com', // Corriger l'email pour correspondre au mock
+        email: 'new@exampl2.com', // Corriger l'email pour correspondre au mock
         password: 'newpass',
-        phone: '+33123456789',
+        phone: '+33123456780',
         country: 'FR',
         preferredCurrency: 'EUR',
       });
@@ -153,7 +153,7 @@ describe('AuthService', () => {
         country: 'FR',
         preferredCurrency: 'EUR',
       });
-      
+
       console.log('Email exists result:', result);
       expect(result.status).toBe(409);
       expect(result.data.error).toBeDefined();

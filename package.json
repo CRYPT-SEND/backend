@@ -27,12 +27,15 @@
     "jet-paths": "^1.1.0",
     "jet-validators": "^1.4.3",
     "jsonfile": "^6.2.0",
+    "libphonenumber-js": "^1.12.15",
     "module-alias": "^2.2.3",
     "morgan": "^1.10.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@faker-js/faker": "^10.0.0",
     "@stylistic/eslint-plugin": "^5.3.1",
     "@swc/core": "^1.13.4",
     "@types/cookie-parser": "^1.4.9",

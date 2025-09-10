@@ -29,9 +29,7 @@
     "config/firebase.ts",
     "scripts",
     "eslint.config.ts",
-    "vitest.config.mts",
-    "jest.config.ts",
-    "jest.setup.ts"
+    "vitest.config.mts"
   ],
   "exclude": [
     "src/public/*"
