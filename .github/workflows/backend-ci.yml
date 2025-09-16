@@ -41,8 +41,8 @@ jobs:
 
       - name: Build and push Docker image to GHCR
         run: |
-          docker build -t ghcr.io/cryptsendorg/cryptsend-backend:latest .  # 🔥 lowercase
-          docker push ghcr.io/cryptsendorg/cryptsend-backend:latest         # 🔥 lowercase
+          docker build -t ghcr.io/crypt-send/cryptsend-backend:latest . 
+          docker push ghcr.io/crypt-send/cryptsend-backend:latest
 
       - name: Deploy to LWS
         if: github.ref == 'refs/heads/develop'
@@ -52,12 +52,12 @@ jobs:
           username: ${{ secrets.LWS_USER }}
           key: ${{ secrets.LWS_SSH_KEY }}
           script: |
-            cd ~/infra || git clone https://github.com/CryptSendOrg/infra.git ~/infra
+            cd ~/infra || git clone https://github.com/CRYPT-SEND/infra.git ~/infra
             cd ~/infra
             git pull origin develop
-            docker compose down                                    # 🔥 compose sans tiret
-            docker compose pull                                    # 🔥 compose sans tiret
-            docker compose up -d --build                           # 🔥 compose sans tiret
+            docker compose down
+            docker compose pull
+            docker compose up -d --build
             sleep 10
             curl -f http://localhost:3000/health || exit 1
             echo "Deployment successful!"
