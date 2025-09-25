@@ -7,7 +7,7 @@ import {
   isValidPhoneNumber, 
   CountryCode, 
 } from 'libphonenumber-js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import {
   User,
   RegistrationResponse,
@@ -27,14 +27,19 @@ const SESSION_EXPIRY_MINUTES = 30;
 
 class RegistrationService {
   private db!: FirebaseFirestore.Firestore;
+  private ready: Promise<void>;
 
   public constructor() {
-    this.init();
+    this.ready = this.init();
   }
 
   private async init(): Promise<void> {
     await firebaseInitPromise;
     this.db = admin.firestore();
+  }
+
+  private async ensureReady(): Promise<void> {
+    await this.ready;
   }
 
   // Génération d'un code à 6 chiffres
@@ -69,7 +74,7 @@ class RegistrationService {
 
   // Créer une session d'inscription
   private async createUser(data: Partial<User>): Promise<string> {
-    const sessionId = uuidv4();
+    const sessionId = randomUUID();
     const now = admin.firestore.Timestamp.now();
     
     const session: User = {
@@ -88,8 +93,9 @@ class RegistrationService {
     return sessionId;
   }
 
-  // Récupérer une session d'inscription
-  private async getUser(sessionId: string): Promise<User | null> {
+  // Récupérer une session d'inscription - Méthode publique pour 
+  // core.service.ts
+  public async getUser(sessionId: string): Promise<User | null> {
     const doc = await this.db.collection('registration_sessions').doc(sessionId).get();
     return doc.exists ? doc.data() as User : null;
   }
@@ -99,8 +105,14 @@ class RegistrationService {
     sessionId: string, 
     updates: Partial<User>,
   ): Promise<void> {
+    // Firestore n'accepte pas `undefined` dans update().
+    // On filtre donc les clés dont la valeur est undefined avant update.
+    const sanitizedEntries = Object.entries(updates)
+      .filter(([, value]) => value !== undefined);
+    const sanitized = Object.fromEntries(sanitizedEntries) as Partial<User>;
+
     await this.db.collection('registration_sessions').doc(sessionId).update({
-      ...updates,
+      ...sanitized,
       updatedAt: admin.firestore.Timestamp.now(),
     });
   }
@@ -140,7 +152,7 @@ class RegistrationService {
     phone: string, 
     code: string,
   ): Promise<void> {
-    // TODO: Intégrer avec Firebase Extensions SMS ou un service SMS
+    // TODO: Intégrer avec un service SMS (Firebase Extensions SMS ou autre)
     // eslint-disable-next-line no-console
     console.log(`[SMS] Code de vérification pour ${phone}: ${code}`);
     // Simulation d'envoi
@@ -152,6 +164,7 @@ class RegistrationService {
     request: EmailRegistrationRequest,
   ): Promise<RegistrationResponse> {
     try {
+      await this.ensureReady();
       const { email } = request;
 
       if (!email || !this.isValidEmail(email)) {
@@ -220,6 +233,7 @@ class RegistrationService {
     request: GoogleRegistrationRequest,
   ): Promise<RegistrationResponse> {
     try {
+      await this.ensureReady();
       const { googleToken } = request;
 
       if (!googleToken) {
@@ -284,6 +298,7 @@ class RegistrationService {
     request: VerifyEmailRequest,
   ): Promise<RegistrationResponse> {
     try {
+      await this.ensureReady();
       const { sessionId, code } = request;
 
       const session = await this.getUser(sessionId);
@@ -341,8 +356,8 @@ class RegistrationService {
       await this.updateUser(sessionId, {
         emailVerified: true,
         step: 'phone_input',
-        emailVerificationCode: undefined,
-        emailCodeExpiry: undefined,
+        emailVerificationCode: undefined, // sera supprimé par sanitize
+        emailCodeExpiry: undefined,       // sera supprimé par sanitize
         emailAttempts: 0,
       });
 
@@ -367,8 +382,11 @@ class RegistrationService {
   }
 
   // Ajout du numéro de téléphone
-  public async addPhone(request: AddPhoneRequest): Promise<RegistrationResponse> {
+  public async addPhone(
+    request: AddPhoneRequest,
+  ): Promise<RegistrationResponse> {
     try {
+      await this.ensureReady();
       const { sessionId, phone, country, preferredCurrency } = request;
 
       const session = await this.getUser(sessionId);
@@ -474,6 +492,7 @@ class RegistrationService {
   public async verifyPhone(
     request: VerifyPhoneRequest,
   ): Promise<RegistrationResponse> {
+    await this.ensureReady();
     const batch = this.db.batch();
     let createdFirebaseUser = false;
     let firebaseUid: string | undefined;
@@ -554,9 +573,12 @@ class RegistrationService {
         }
 
         // 2. Créer le document utilisateur dans Firestore
-        const userDoc = this.db.collection('users').doc(firebaseUid);
+        // Utiliser le numéro de téléphone comme identifiant du document 
+        // utilisateur
+        const userDocId = session.phone!;
+        const userDoc = this.db.collection('users').doc(userDocId);
         batch.set(userDoc, {
-          id: firebaseUid,
+          id: userDocId,
           email: session.email,
           phone: session.phone,
           country: session.country,
@@ -579,6 +601,9 @@ class RegistrationService {
           step: 'completed',
           phoneVerified: true,
           updatedAt: now,
+          // Persist the Firebase UID so downstream services (core) can 
+          // link wallet
+          firebaseUid,
         });
 
         // Exécuter la transaction
@@ -602,10 +627,15 @@ class RegistrationService {
           try {
             await admin.auth().deleteUser(firebaseUid);
             // eslint-disable-next-line no-console
-            console.log(`Rollback: Utilisateur Firebase ${firebaseUid} supprimé`);
+            console.log(
+              `Rollback: Utilisateur Firebase ${firebaseUid} supprimé`,
+            );
           } catch (rollbackError) {
             // eslint-disable-next-line no-console
-            console.error('Erreur lors du rollback Firebase Auth:', rollbackError);
+            console.error(
+              'Erreur lors du rollback Firebase Auth:', 
+              rollbackError,
+            );
           }
         }
 
