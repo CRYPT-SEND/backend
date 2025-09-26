@@ -174,31 +174,31 @@ export const addPhone = [
 ];
 
 // ÉTAPE 4: Vérification finale du téléphone
-export const verifyPhone = [
-  rateLimit(10, 60000),
-  validateInput(['sessionId', 'code']),
-  async (req: Request, res: Response) => {
-    try {
-      const body = req.body as Record<string, unknown>;
-      const request: VerifyPhoneRequest = {
-        sessionId: body.sessionId as string,
-        code: (body.code as string).replace(/\s/g, ''),
-      };
+// export const verifyPhone = [
+//   rateLimit(10, 60000),
+//   validateInput(['sessionId', 'code']),
+//   async (req: Request, res: Response) => {
+//     try {
+//       const body = req.body as Record<string, unknown>;
+//       const request: VerifyPhoneRequest = {
+//         sessionId: body.sessionId as string,
+//         code: (body.code as string).replace(/\s/g, ''),
+//       };
 
-      const result = await RegistrationService.verifyPhone(request);
-      const statusCode = result.success ? 200 : 400;
+//       const result = await RegistrationService.verifyPhone(request);
+//       const statusCode = result.success ? 200 : 400;
       
-      return res.status(statusCode).json(result);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Erreur dans verifyPhone:', error);
-      return res.status(500).json({
-        success: false,
-        error: { code: 'SERVER_ERROR', message: 'Erreur serveur.' },
-      });
-    }
-  },
-];
+//       return res.status(statusCode).json(result);
+//     } catch (error) {
+//       // eslint-disable-next-line no-console
+//       console.error('Erreur dans verifyPhone:', error);
+//       return res.status(500).json({
+//         success: false,
+//         error: { code: 'SERVER_ERROR', message: 'Erreur serveur.' },
+//       });
+//     }
+//   },
+// ];
 
 // Récupération du statut d'inscription
 export async function getRegistrationStatus(req: Request, res: Response) {

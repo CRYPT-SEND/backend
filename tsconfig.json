@@ -27,6 +27,8 @@
     "tests/**/*.ts",
     "config.ts",
     "config/firebase.ts",
+    "config/blockchain.config.ts",
+    "config/index.config.ts",
     "scripts",
     "eslint.config.ts",
     "vitest.config.mts"

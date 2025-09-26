@@ -15,7 +15,7 @@ export function createTestUser(overrides = {}) {
 }
 
 export function createRegistrationData(step = 1, overrides = {}) {
-  const base = createTestUser();
+  const base = createTestUser(overrides);
   
   switch (step) {
   case 1:
