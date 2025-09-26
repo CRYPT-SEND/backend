@@ -5,9 +5,9 @@ import { Wallet } from './wallet.model';
 import { Quote, TransferOrder } from './payment.model';
 import { FiatTransaction, CryptoTransaction } from './transaction.model';
 import { LedgerEntry, Notification, AuditLog, RateLimit } from './audit.model';
-import {
-} from './enum.model';
+import {} from './enum.model';
 import { EnumValue } from './enum.model';
+import { Report } from './report.model';
 export interface DatabaseSchema {
   users: CollectionReference<User>;
   kyc_profiles: CollectionReference<KYCProfile>;
@@ -31,4 +31,6 @@ export interface DatabaseSchema {
   order_statuses: CollectionReference<EnumValue>;
   wallet_types: CollectionReference<EnumValue>;
   wallet_statuses: CollectionReference<EnumValue>;
+
+  //reports: CollectionReference<Report>;
 }

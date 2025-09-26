@@ -1,7 +1,8 @@
 import logger from 'jet-logger';
 
 import ENV from '@src/common/constants/ENV';
-import server from './server';
+import app from './server';
+import apiRouter from './routes/index';
 
 
 /******************************************************************************
@@ -17,8 +18,11 @@ const SERVER_START_MSG = (
                                   Run
 ******************************************************************************/
 
+// Monter les routes avant de démarrer le serveur
+app.use('/api', apiRouter);
+
 // Start the server
-server.listen(ENV.Port, err => {
+app.listen(ENV.Port, err => {
   if (!!err) {
     logger.err(err.message);
   } else {

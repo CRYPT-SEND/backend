@@ -1,4 +1,31 @@
+// ===== FONCTIONS UTILITAIRES =====
+function generateRandomPassword(length = 12): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
+async function sendEmail(to: string, subject: string, body: string) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail', // ou 'smtp' selon ton fournisseur
+    auth: {
+      user: 'ton.email@gmail.com',
+      pass: 'ton_mot_de_passe_app', // Utilise un mot de passe d'application Gmail
+    },
+  });
+
+  await transporter.sendMail({
+    from: 'CryptSend <ton.email@gmail.com>',
+    to,
+    subject,
+    text: body,
+  });
+}
 import admin from 'firebase-admin';
+import nodemailer from 'nodemailer';
 import { Request, Response, NextFunction } from 'express';
 
 // Types personnalisés pour étendre Request
@@ -83,6 +110,45 @@ export async function adminAuthMiddleware(
 }
 
 // ===== CONTROLEURS UTILISATEURS =====
+// ===== AJOUT UTILISATEUR =====
+export async function createUser(req: Request, res: Response) {
+  try {
+    const { email, name, role = 'USER', ...otherData } = req.body as Record<string, unknown>;
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Email et nom requis' });
+    }
+
+    // Générer un mot de passe aléatoire
+    const generatedPassword = generateRandomPassword();
+
+    // 1. Créer l'utilisateur dans Firebase Auth
+    const userRecord = await admin.auth().createUser({
+      email: email as string,
+      password: generatedPassword,
+      emailVerified: false,
+      disabled: false,
+    });
+
+    // 2. Ajouter le document dans Firestore
+    await admin.firestore().collection('users').doc(userRecord.uid).set({
+      email,
+      name,
+      role,
+      ...otherData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // 3. Envoyer le mot de passe par email
+    await sendEmail(email as string, 'Votre compte a été créé',
+      `Bonjour ${name},\n\nVotre compte a été créé.\nVotre mot de passe est : ${generatedPassword}\n\nMerci de le changer après connexion.`);
+
+    return res.status(201).json({ message: 'Utilisateur créé avec succès', uid: userRecord.uid });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erreur lors de la création de l\'utilisateur', details: error });
+  }
+}
+
 export async function getAllUsers(req: Request, res: Response) {
   try {
     const usersSnapshot = await admin.firestore()
@@ -123,23 +189,44 @@ export async function updateUser(req: Request, res: Response) {
   try {
     const { userId } = req.params;
     const updateData = req.body as Record<string, unknown>;
-    
+
     // Protéger les champs sensibles
     delete updateData.id;
     delete updateData.createdAt;
     delete updateData.email; // Pour changer l'email, utiliser Firebase Auth
-    
+
+    // Si le champ password est présent, générer un nouveau mot de passe
+    let generatedPassword: string | undefined;
+    if (updateData.password) {
+      // Générer un mot de passe aléatoire
+      generatedPassword = generateRandomPassword();
+      // Mettre à jour le mot de passe dans Firebase Auth
+      await admin.auth().updateUser(userId, { password: generatedPassword });
+
+      // Récupérer l'email de l'utilisateur
+      const userDoc = await admin.firestore().collection('users').doc(userId).get();
+      const userEmail = userDoc.data()?.email;
+      if (userEmail) {
+        // Envoyer le mot de passe par email
+        await sendEmail(userEmail, 'Votre nouveau mot de passe',
+          `Bonjour,\n\nVotre nouveau mot de passe est : ${generatedPassword}\n\nMerci de le changer après connexion.`);
+      }
+      // On ne stocke pas le mot de passe dans Firestore
+      delete updateData.password;
+    }
+
     await admin.firestore().collection('users').doc(userId).update({
       ...updateData,
       updatedAt: new Date(),
     });
-    
-    return res.status(200).json({ 
-      message: 'Utilisateur mis à jour avec succès', 
+
+    return res.status(200).json({
+      message: 'Utilisateur mis à jour avec succès',
+      passwordSent: !!generatedPassword,
     });
   } catch {
-    return res.status(500).json({ 
-      error: 'Erreur lors de la mise à jour de l\'utilisateur', 
+    return res.status(500).json({
+      error: 'Erreur lors de la mise à jour de l\'utilisateur',
     });
   }
 }
