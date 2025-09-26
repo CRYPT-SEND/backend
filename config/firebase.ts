@@ -112,3 +112,4 @@ export const firebaseInitPromise = (async (): Promise<boolean> => {
 // Export ES6 au lieu de module.exports
 export { admin };
 export default { admin, firebaseInitPromise };
+
