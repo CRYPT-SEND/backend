@@ -25,7 +25,8 @@ export async function registerUserWithWalletHandler(
 ) {
   try {
     const result = await registerUserWithWallet(req.body);
-    res.json({ success: true, ...result });
+    // res.json({ success: true, ...result });
+    res.json({ success: true});
   } catch (err) {
     res.status(400).json({ success: false, error: (err as Error).message });
   }
@@ -43,7 +44,8 @@ export async function transferCusdHandler(
       recipientPhone, 
       amount,
     });
-    res.json({ success: true, ...result });
+    // res.json({ success: true, ...result });
+    res.json({ success: true});
   } catch (err) {
     res.status(400).json({ success: false, error: (err as Error).message });
   }
