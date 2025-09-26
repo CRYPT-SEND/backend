@@ -6,8 +6,10 @@ import UserRoutes from './UserRoutes';
 // import principalRoute from './principalRoute';
 import authRoutes from '../services/auth/auth.routes';
 import coreRoutes from '../services/core/core.routes';
+import blockchainStatusRoutes from '../services/blockchain/status.routes';
 import adminRoutes from './adminRoutes';
 import superAdminRoutes from './superAdminRoutes';
+import healthRoutes from '../services/health/health.routes';
 // import { ad } from 'vitest/dist/chunks/reporters.d.BFLkQcL6';
 
 
@@ -44,6 +46,12 @@ apiRouter.use(Paths.Users.Base, userRouter);
 
 // Add Core routes under /core
 apiRouter.use('/core', coreRoutes);
+
+// Add Blockchain status routes under /blockchain
+apiRouter.use('/blockchain', blockchainStatusRoutes);
+
+// Add Health routes under /health
+apiRouter.use('/health', healthRoutes);
 
 // Add Admin routes under /admin
 apiRouter.use('/admin', adminRoutes);
