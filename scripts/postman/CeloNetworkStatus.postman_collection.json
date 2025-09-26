@@ -1,0 +1,75 @@
+{
+  "info": {
+    "name": "CRYPTSEND - Blockchain Status",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection pour tester l'état du réseau Celo (snapshot + SSE)."
+  },
+  "item": [
+    {
+      "name": "GET /api/blockchain/status (snapshot)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/blockchain/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "blockchain",
+            "status"
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Le champ connected existe', function () {",
+              "  pm.expect(json).to.have.property('connected');",
+              "});",
+              "if (json.connected) {",
+              "  pm.test('chainId disponible quand connecté', function () {",
+              "    pm.expect(json).to.have.property('chainId');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /api/blockchain/status/stream (SSE)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/blockchain/status/stream?interval={{intervalMs}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "blockchain",
+            "status",
+            "stream"
+          ],
+          "query": [
+            {
+              "key": "interval",
+              "value": "{{intervalMs}}"
+            }
+          ]
+        },
+        "description": "Flux Server-Sent Events. Postman peut ne pas afficher correctement les flux continus; utilisez un navigateur ou curl si nécessaire."
+      },
+      "response": []
+    }
+  ],
+  "event": []
+}
