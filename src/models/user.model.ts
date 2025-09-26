@@ -1,38 +1,69 @@
-import { Currency, KYCLevel, UserStatus } from './types';
+// types/registration.types.ts
+
 import { Timestamp } from 'firebase-admin/firestore';
 
 export interface User {
   id: string;
-  phone: string;
-  email: string;
-  passwordHash: string;
-  country: string;
-  preferredCurrency: Currency;
-  kycLevel: KYCLevel;
-  status: UserStatus;
-  twoFAEnabled: boolean;
-  twoFASecret?: string;
-  deviceIds: string[];
-  lastLoginAt: Timestamp;
-  riskScore: number;
+  step: 'email_verification' | 'phone_input' | 'phone_verification' | 'completed';
+  email?: string;
+  emailVerified: boolean;
+  phone?: string;
+  phoneVerified: boolean;
+  country?: string;
+  preferredCurrency?: string;
+  emailVerificationCode?: string;
+  phoneVerificationCode?: string;
+  emailCodeExpiry?: Timestamp;
+  phoneCodeExpiry?: Timestamp;
+  emailAttempts: number;
+  phoneAttempts: number;
+  lastCodeSentAt?: Timestamp;
+  firebaseUid?: string; // Pour le cas Google
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-export interface CreateUserData {
-  phone: string;
-  email: string;
-  passwordHash: string;
-  country: string;
-  preferredCurrency?: Currency;
+export interface VerificationCode {
+  code: string;
+  expiry: Timestamp;
+  attempts: number;
+  type: 'email' | 'phone';
 }
 
-export interface UpdateUserData {
-  email?: string;
-  country?: string;
-  preferredCurrency?: Currency;
-  twoFAEnabled?: boolean;
-  twoFASecret?: string;
-  status?: UserStatus;
-  riskScore?: number;
+export interface RegistrationResponse {
+  success: boolean;
+  data?: {
+    step: string,
+    message: string,
+    sessionId: string,
+  };
+  error?: {
+    code: string,
+    message: string,
+  };
+}
+
+export interface EmailRegistrationRequest {
+  email: string;
+}
+
+export interface GoogleRegistrationRequest {
+  googleToken: string;
+}
+
+export interface VerifyEmailRequest {
+  sessionId: string;
+  code: string;
+}
+
+export interface AddPhoneRequest {
+  sessionId: string;
+  phone: string;
+  country: string;
+  preferredCurrency?: string;
+}
+
+export interface VerifyPhoneRequest {
+  sessionId: string;
+  code: string;
 }

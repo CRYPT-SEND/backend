@@ -8,10 +8,10 @@ export interface Quote {
   toAmountEstimated: number;
   exchangeRate: number;
   fees: {
-    fixed: number;
-    percent: number;
-    network: number;
-    total: number;
+    fixed: number,
+    percent: number,
+    network: number,
+    total: number,
   };
   marginBps: number;
   slippageMaxBps: number;
@@ -28,12 +28,12 @@ export interface OrderEvent {
   status: OrderStatus;
   timestamp: Timestamp;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ReceiverDetails {
   method: PaymentMethod;
-  details: any; // Spécifique à chaque méthode
+  details: unknown; // Spécifique à chaque méthode
 }
 
 export interface TransferOrder {

@@ -1,25 +1,25 @@
-import { KYCLevel,KYCStatus,KYC_LIMITS } from "./types";
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from 'firebase-admin/firestore';
 
 export interface KYCDocument {
-  type: 'ID' | 'PASSPORT' | 'DRIVING_LICENSE' | 'PROOF_OF_ADDRESS' | 'INCOME_PROOF';
+  typeId: string; // Référence à KYCDocumentTypeModel
   url: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  statusId: string; // Référence à KYCStatusModel
   uploadedAt: Timestamp;
   reviewedAt?: Timestamp;
   rejectionReason?: string;
 }
 
+
 export interface KYCProfile {
   id: string;
   userId: string;
-  level: KYCLevel;
-  status: KYCStatus;
+  levelId: string; // Référence à KYCLevelModel
+  statusId: string; // Référence à KYCStatusModel
   documents: KYCDocument[];
   limits: {
-    dailyLimit: number;
-    monthlyLimit: number;
-    yearlyLimit: number;
+    dailyLimit: number,
+    monthlyLimit: number,
+    yearlyLimit: number,
   };
   pepScreened: boolean;
   sanctionsScreened: boolean;
@@ -33,13 +33,13 @@ export interface KYCProfile {
 
 export interface CreateKYCProfileData {
   userId: string;
-  level: KYCLevel;
+  levelId: string;
   documents?: KYCDocument[];
 }
 
 export interface UpdateKYCProfileData {
-  level?: KYCLevel;
-  status?: KYCStatus;
+  levelId?: string;
+  statusId?: string;
   documents?: KYCDocument[];
   pepScreened?: boolean;
   sanctionsScreened?: boolean;

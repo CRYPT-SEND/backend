@@ -12,6 +12,7 @@ import HttpStatusCodes from '@src/common/constants/HttpStatusCodes';
 import { RouteError } from '@src/common/util/route-errors';
 import { NodeEnvs } from '@src/common/constants';
 
+import '../config/firebase';
 
 /******************************************************************************
                                 Setup

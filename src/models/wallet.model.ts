@@ -1,28 +1,25 @@
-import { Network, WalletStatus, WalletType } from './types';
 import { Timestamp } from 'firebase-admin/firestore';
 
-export interface WalletBalance {
-  [currency: string]: number;
-}
+export type WalletBalance = Record<string, number>;
 
 export interface Wallet {
   id: string;
   userId: string;
-  type: WalletType;
-  network: Network;
+  typeId: string; // Référence à WalletTypeModel
+  networkId: string; // Référence à NetworkModel
   address: string;
   encryptedPrivateKey?: string;
   keyDerivationPath?: string;
   balance: WalletBalance;
-  status: WalletStatus;
+  statusId: string; // Référence à WalletStatusModel
   createdAt: Timestamp;
   lastSyncAt: Timestamp;
 }
 
 export interface CreateWalletData {
   userId: string;
-  type: WalletType;
-  network: Network;
+  typeId: string;
+  networkId: string;
   address: string;
   encryptedPrivateKey?: string;
   keyDerivationPath?: string;

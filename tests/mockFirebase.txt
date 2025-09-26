@@ -1,0 +1,518 @@
+import { faker } from '@faker-js/faker';
+import { vi } from 'vitest';
+
+// Types
+interface User {
+  uid: string;
+  email: string;
+  name?: string;
+  createdAt: Date;
+  [key: string]: any;
+}
+
+interface DocumentSnapshot {
+  exists: boolean;
+  data: () => any | null;
+  id: string;
+  ref: {
+    id: string;
+    path: string;
+  };
+}
+
+interface QuerySnapshot {
+  empty: boolean;
+  size: number;
+  docs: DocumentSnapshot[];
+  forEach: (callback: (doc: DocumentSnapshot) => void) => void;
+}
+
+interface DecodedIdToken {
+  uid: string;
+  email: string;
+  name: string;
+  iat: number;
+  exp: number;
+}
+
+interface FirebaseError extends Error {
+  code: string;
+}
+
+interface TestDatabase {
+  users: Map<string, User>;
+  sessions: Map<string, any>;
+  [key: string]: Map<string, any>;
+}
+
+type WhereFilterOperator = '==' | '!=' | '>' | '>=' | '<' | '<=' | 'array-contains' | 'in' | 'not-in';
+type OrderDirection = 'asc' | 'desc';
+
+// Base de données en mémoire pour les tests
+let testDB: TestDatabase = {
+  users: new Map<string, User>(),
+  sessions: new Map<string, any>()
+};
+
+// Fonction pour réinitialiser la DB entre les tests
+export const resetTestDB = (): void => {
+  testDB = {
+    users: new Map<string, User>(),
+    sessions: new Map<string, any>()
+  };
+};
+
+// Fonction pour obtenir l'état actuel de la DB (utile pour debugging)
+export const getTestDBState = (): TestDatabase => testDB;
+
+// Helper pour filtrer les documents selon les critères where
+const applyWhereFilter = (docs: any[], field: string, operator: WhereFilterOperator, value: any): any[] => {
+  return docs.filter((doc: any) => {
+    const fieldValue: any = doc[field];
+    switch (operator) {
+      case '==':
+        return fieldValue === value;
+      case '!=':
+        return fieldValue !== value;
+      case '>':
+        return fieldValue > value;
+      case '>=':
+        return fieldValue >= value;
+      case '<':
+        return fieldValue < value;
+      case '<=':
+        return fieldValue <= value;
+      case 'array-contains':
+        return Array.isArray(fieldValue) && fieldValue.includes(value);
+      case 'in':
+        return Array.isArray(value) && value.includes(fieldValue);
+      case 'not-in':
+        return Array.isArray(value) && !value.includes(fieldValue);
+      default:
+        return true;
+    }
+  });
+};
+
+// Mock de Firebase Admin
+vi.mock('firebase-admin', () => ({
+  default: {
+    apps: [],
+    initializeApp: vi.fn()
+  },
+  
+  auth: () => ({
+    createUser: vi.fn().mockImplementation((userData: Partial<User>): Promise<User> => {
+      try {
+        if (!userData.email) {
+          const error: FirebaseError = new Error('auth/invalid-email') as FirebaseError;
+          error.code = 'auth/invalid-email';
+          throw error;
+        }
+        
+        // Vérifier si l'utilisateur existe déjà
+        const existingUser: User | undefined = Array.from(testDB.users.values())
+          .find((u: User) => u.email === userData.email);
+        if (existingUser) {
+          const error: FirebaseError = new Error('auth/email-already-exists') as FirebaseError;
+          error.code = 'auth/email-already-exists';
+          throw error;
+        }
+        
+        const uid: string = faker.string.uuid();
+        const user: User = { 
+          uid, 
+          email: userData.email,
+          createdAt: new Date(),
+          ...userData 
+        };
+        testDB.users.set(uid, user);
+        return Promise.resolve(user);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }),
+    
+    getUserByEmail: vi.fn().mockImplementation((email: string): Promise<User> => {
+      try {
+        if (!email) {
+          const error: FirebaseError = new Error('auth/invalid-email') as FirebaseError;
+          error.code = 'auth/invalid-email';
+          throw error;
+        }
+        
+        const user: User | undefined = Array.from(testDB.users.values())
+          .find((u: User) => u.email === email);
+        if (!user) {
+          const error: FirebaseError = new Error('auth/user-not-found') as FirebaseError;
+          error.code = 'auth/user-not-found';
+          throw error;
+        }
+        return Promise.resolve(user);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }),
+    
+    getUser: vi.fn().mockImplementation((uid: string): Promise<User> => {
+      try {
+        if (!uid) {
+          const error: FirebaseError = new Error('auth/invalid-uid') as FirebaseError;
+          error.code = 'auth/invalid-uid';
+          throw error;
+        }
+        
+        const user: User | undefined = testDB.users.get(uid);
+        if (!user) {
+          const error: FirebaseError = new Error('auth/user-not-found') as FirebaseError;
+          error.code = 'auth/user-not-found';
+          throw error;
+        }
+        return Promise.resolve(user);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }),
+    
+    deleteUser: vi.fn().mockImplementation((uid: string): Promise<void> => {
+      try {
+        if (!uid) {
+          const error: FirebaseError = new Error('auth/invalid-uid') as FirebaseError;
+          error.code = 'auth/invalid-uid';
+          throw error;
+        }
+        
+        if (!testDB.users.has(uid)) {
+          const error: FirebaseError = new Error('auth/user-not-found') as FirebaseError;
+          error.code = 'auth/user-not-found';
+          throw error;
+        }
+        
+        testDB.users.delete(uid);
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }),
+    
+    verifyIdToken: vi.fn().mockImplementation((token: string): Promise<DecodedIdToken> => {
+      try {
+        if (!token) {
+          const error: FirebaseError = new Error('auth/argument-error') as FirebaseError;
+          error.code = 'auth/argument-error';
+          throw error;
+        }
+        
+        // Simulation de JWT décodé avec données Faker
+        if (token.startsWith('valid')) {
+          const decodedToken: DecodedIdToken = {
+            uid: faker.string.uuid(),
+            email: faker.internet.email(),
+            name: faker.person.fullName(),
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          };
+          return Promise.resolve(decodedToken);
+        }
+        
+        const error: FirebaseError = new Error('auth/invalid-token') as FirebaseError;
+        error.code = 'auth/invalid-token';
+        throw error;
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    })
+  }),
+  
+  firestore: () => ({
+    collection: (collName: string) => {
+      if (!collName) {
+        throw new Error('Collection name is required');
+      }
+      
+      // Initialiser la collection si elle n'existe pas
+      if (!testDB[collName]) {
+        testDB[collName] = new Map<string, any>();
+      }
+      
+      return {
+        doc: (docId: string = faker.string.uuid()) => ({
+          set: vi.fn().mockImplementation((data: Record<string, any>, options: { merge?: boolean } = {}): Promise<void> => {
+            try {
+              if (!data || typeof data !== 'object') {
+                throw new Error('Data must be an object');
+              }
+              
+              const timestamp: Date = new Date();
+              const docData: Record<string, any> = {
+                id: docId,
+                ...data,
+                createdAt: timestamp,
+                updatedAt: timestamp
+              };
+              
+              if (options.merge) {
+                const existingDoc: any = testDB[collName].get(docId);
+                if (existingDoc) {
+                  Object.assign(docData, existingDoc, data, { updatedAt: timestamp });
+                }
+              }
+              
+              testDB[collName].set(docId, docData);
+              return Promise.resolve();
+            } catch (error) {
+              return Promise.reject(error);
+            }
+          }),
+          
+          update: vi.fn().mockImplementation((updates: Record<string, any>): Promise<void> => {
+            try {
+              if (!updates || typeof updates !== 'object') {
+                throw new Error('Updates must be an object');
+              }
+              
+              if (!testDB[collName].has(docId)) {
+                const error: FirebaseError = new Error('No document to update') as FirebaseError;
+                error.code = 'not-found';
+                throw error;
+              }
+              
+              const existingDoc: any = testDB[collName].get(docId);
+              const updatedDoc: Record<string, any> = { 
+                ...existingDoc, 
+                ...updates, 
+                updatedAt: new Date()
+              };
+              
+              testDB[collName].set(docId, updatedDoc);
+              return Promise.resolve();
+            } catch (error) {
+              return Promise.reject(error);
+            }
+          }),
+          
+          get: vi.fn().mockImplementation((): Promise<DocumentSnapshot> => {
+            try {
+              const doc: any = testDB[collName].get(docId);
+              
+              return Promise.resolve({
+                exists: !!doc,
+                data: () => doc || null,
+                id: docId,
+                ref: {
+                  id: docId,
+                  path: `${collName}/${docId}`
+                }
+              });
+            } catch (error) {
+              return Promise.reject(error);
+            }
+          }),
+          
+          delete: vi.fn().mockImplementation((): Promise<{ existed: boolean }> => {
+            try {
+              const existed: boolean = testDB[collName].has(docId);
+              testDB[collName].delete(docId);
+              return Promise.resolve({ existed });
+            } catch (error) {
+              return Promise.reject(error);
+            }
+          })
+        }),
+        
+        // Implémentation des queries
+        where: (field: string, operator: WhereFilterOperator, value: any) => {
+          let queryDocs: any[] = Array.from(testDB[collName].values());
+          queryDocs = applyWhereFilter(queryDocs, field, operator, value);
+          
+          return {
+            limit: (limitCount: number) => ({
+              get: vi.fn().mockImplementation((): Promise<QuerySnapshot> => {
+                try {
+                  const limitedDocs: any[] = queryDocs.slice(0, limitCount);
+                  const docSnapshots: DocumentSnapshot[] = limitedDocs.map((data: any) => ({
+                    exists: true,
+                    data: () => data,
+                    id: data.id,
+                    ref: {
+                      id: data.id,
+                      path: `${collName}/${data.id}`
+                    }
+                  }));
+                  
+                  return Promise.resolve({
+                    empty: docSnapshots.length === 0,
+                    size: docSnapshots.length,
+                    docs: docSnapshots,
+                    forEach: (callback: (doc: DocumentSnapshot) => void) => docSnapshots.forEach(callback)
+                  });
+                } catch (error) {
+                  return Promise.reject(error);
+                }
+              })
+            }),
+            
+            orderBy: (field: string, direction: OrderDirection = 'asc') => ({
+              get: vi.fn().mockImplementation((): Promise<QuerySnapshot> => {
+                try {
+                  const sortedDocs: any[] = [...queryDocs].sort((a: any, b: any) => {
+                    const aVal: any = a[field];
+                    const bVal: any = b[field];
+                    
+                    if (direction === 'desc') {
+                      return bVal > aVal ? 1 : bVal < aVal ? -1 : 0;
+                    }
+                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                  });
+                  
+                  const docSnapshots: DocumentSnapshot[] = sortedDocs.map((data: any) => ({
+                    exists: true,
+                    data: () => data,
+                    id: data.id,
+                    ref: {
+                      id: data.id,
+                      path: `${collName}/${data.id}`
+                    }
+                  }));
+                  
+                  return Promise.resolve({
+                    empty: docSnapshots.length === 0,
+                    size: docSnapshots.length,
+                    docs: docSnapshots,
+                    forEach: (callback: (doc: DocumentSnapshot) => void) => docSnapshots.forEach(callback)
+                  });
+                } catch (error) {
+                  return Promise.reject(error);
+                }
+              }),
+              
+              limit: (limitCount: number) => ({
+                get: vi.fn().mockImplementation((): Promise<QuerySnapshot> => {
+                  try {
+                    const sortedDocs: any[] = [...queryDocs].sort((a: any, b: any) => {
+                      const aVal: any = a[field];
+                      const bVal: any = b[field];
+                      
+                      if (direction === 'desc') {
+                        return bVal > aVal ? 1 : bVal < aVal ? -1 : 0;
+                      }
+                      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                    });
+                    
+                    const limitedDocs: any[] = sortedDocs.slice(0, limitCount);
+                    const docSnapshots: DocumentSnapshot[] = limitedDocs.map((data: any) => ({
+                      exists: true,
+                      data: () => data,
+                      id: data.id,
+                      ref: {
+                        id: data.id,
+                        path: `${collName}/${data.id}`
+                      }
+                    }));
+                    
+                    return Promise.resolve({
+                      empty: docSnapshots.length === 0,
+                      size: docSnapshots.length,
+                      docs: docSnapshots,
+                      forEach: (callback: (doc: DocumentSnapshot) => void) => docSnapshots.forEach(callback)
+                    });
+                  } catch (error) {
+                    return Promise.reject(error);
+                  }
+                })
+              })
+            }),
+            
+            get: vi.fn().mockImplementation((): Promise<QuerySnapshot> => {
+              try {
+                const docSnapshots: DocumentSnapshot[] = queryDocs.map((data: any) => ({
+                  exists: true,
+                  data: () => data,
+                  id: data.id,
+                  ref: {
+                    id: data.id,
+                    path: `${collName}/${data.id}`
+                  }
+                }));
+                
+                return Promise.resolve({
+                  empty: docSnapshots.length === 0,
+                  size: docSnapshots.length,
+                  docs: docSnapshots,
+                  forEach: (callback: (doc: DocumentSnapshot) => void) => docSnapshots.forEach(callback)
+                });
+              } catch (error) {
+                return Promise.reject(error);
+              }
+            })
+          };
+        },
+        
+        // Get all documents in collection
+        get: vi.fn().mockImplementation((): Promise<QuerySnapshot> => {
+          try {
+            const allDocs: any[] = Array.from(testDB[collName].values());
+            const docSnapshots: DocumentSnapshot[] = allDocs.map((data: any) => ({
+              exists: true,
+              data: () => data,
+              id: data.id,
+              ref: {
+                id: data.id,
+                path: `${collName}/${data.id}`
+              }
+            }));
+            
+            return Promise.resolve({
+              empty: docSnapshots.length === 0,
+              size: docSnapshots.length,
+              docs: docSnapshots,
+              forEach: (callback: (doc: DocumentSnapshot) => void) => docSnapshots.forEach(callback)
+            });
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        }),
+        
+        // Add document with auto-generated ID
+        add: vi.fn().mockImplementation((data: Record<string, any>): Promise<{ id: string; path: string }> => {
+          try {
+            if (!data || typeof data !== 'object') {
+              throw new Error('Data must be an object');
+            }
+            
+            const docId: string = faker.string.uuid();
+            const timestamp: Date = new Date();
+            const docData: Record<string, any> = {
+              id: docId,
+              ...data,
+              createdAt: timestamp,
+              updatedAt: timestamp
+            };
+            
+            testDB[collName].set(docId, docData);
+            
+            return Promise.resolve({
+              id: docId,
+              path: `${collName}/${docId}`
+            });
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        })
+      };
+    } 
+  })
+}));
+
+// Exports utiles pour les tests
+export { testDB };
+export type { 
+  User, 
+  DocumentSnapshot, 
+  QuerySnapshot, 
+  DecodedIdToken, 
+  FirebaseError, 
+  TestDatabase,
+  WhereFilterOperator,
+  OrderDirection 
+};

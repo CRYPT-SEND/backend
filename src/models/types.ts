@@ -1,5 +1,3 @@
-import { Timestamp } from 'firebase-admin/firestore';
-
 export type Currency = 'XAF' | 'USD' | 'EUR' | 'BTC' | 'ETH' | 'USDT';
 export type Network = 'ETHEREUM' | 'BITCOIN' | 'POLYGON' | 'BSC';
 export type PaymentMethod = 'OM' | 'MTN' | 'BANK' | 'CRYPTO';
@@ -42,20 +40,13 @@ export enum WalletStatus {
   FROZEN = 'FROZEN'
 }
 
-export const KYC_LIMITS = {
-  L1: {
-    dailyLimit: 50000,      // 50k XAF
-    monthlyLimit: 200000,   // 200k XAF
-    yearlyLimit: 1000000    // 1M XAF
-  },
-  L2: {
-    dailyLimit: 300000,     // 300k XAF
-    monthlyLimit: 1500000,  // 1.5M XAF
-    yearlyLimit: 10000000   // 10M XAF
-  },
-  L3: {
-    dailyLimit: 1000000,    // 1M XAF
-    monthlyLimit: 5000000,  // 5M XAF
-    yearlyLimit: 50000000   // 50M XAF
-  }
-} as const;
+// export const KYC_LIMITS = {
+// Les limites KYC doivent être stockées en base et modifiables par l'admin.
+
+export interface KYCLevelLimit {
+  level: string; // 'L1', 'L2', 'L3', etc.
+  dailyLimit: number;
+  monthlyLimit: number;
+  yearlyLimit: number;
+  updatedAt: Date;
+}

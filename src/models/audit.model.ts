@@ -10,7 +10,7 @@ export interface LedgerEntry {
   amount: number;
   balance: number; // Solde après transaction
   description: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Timestamp;
 }
 
@@ -20,7 +20,7 @@ export interface AuditLog {
   action: string;
   resource: string;
   resourceId: string;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   ipAddress: string;
   userAgent: string;
   timestamp: Timestamp;
@@ -38,7 +38,7 @@ export interface Notification {
   scheduledAt: Timestamp;
   sentAt?: Timestamp;
   deliveredAt?: Timestamp;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface RateLimit {

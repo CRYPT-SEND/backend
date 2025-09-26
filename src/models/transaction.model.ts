@@ -13,7 +13,7 @@ export interface FiatTransaction {
   method: PaymentMethod;
   externalId?: string;
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Timestamp;
   completedAt?: Timestamp;
 }
@@ -35,7 +35,7 @@ export interface CryptoTransaction {
   confirmations: number;
   requiredConfirmations: number;
   status: 'PENDING' | 'CONFIRMED' | 'FAILED';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Timestamp;
   confirmedAt?: Timestamp;
 }
