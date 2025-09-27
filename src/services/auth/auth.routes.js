@@ -56,7 +56,7 @@ router.post('/verify-email', authController.verifyEmail);
 // Ajout du numéro de téléphone (étape 3 des deux flux)
 router.post('/add-phone', authController.addPhone);
 // Vérification finale du téléphone (étape 4 des deux flux)
-router.post('/verify-phone', authController.verifyPhone);
+// router.post('/verify-phone', authController.verifyPhone);
 // Récupération du statut d'une inscription en cours
 router.get('/registration-status/:sessionId', authController.getRegistrationStatus);
 // ==================== ROUTES EXISTANTES (CONSERVÉES) ====================

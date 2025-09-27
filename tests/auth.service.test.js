@@ -154,15 +154,15 @@ describe('AuthService', () => {
         //   // expect(result.data.userId).toBe('user-register');
         // }, 10000);
         it('should return 409 if email already exists', async () => {
-            console.log('Starting email exists test');
+            // Test d'inscription avec un email existant
             const result = await AuthService.register({
-                email: 'new@example.com', // Utiliser l'email configuré dans le mock pour retourner EMAIL_EXISTS
+                email: 'new@example.com', // Email configuré dans le mock
                 password: 'password123',
-                phone: '+237656994959',
+                phone: '+237656994900',
                 country: 'FR',
                 preferredCurrency: 'EUR',
             });
-            console.log('Email exists result:', result);
+            // Vérification du résultat
             expect(result.status).toBe(409);
             expect(result.data.error).toBeDefined();
         }, 10000);

@@ -17,7 +17,7 @@ function createTestUser(overrides = {}) {
     };
 }
 function createRegistrationData(step = 1, overrides = {}) {
-    const base = createTestUser();
+    const base = createTestUser(overrides);
     switch (step) {
         case 1:
             return { email: base.email, password: base.password };

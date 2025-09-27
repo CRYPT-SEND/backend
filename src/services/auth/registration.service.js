@@ -7,7 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const firebase_admin_1 = __importDefault(require("firebase-admin"));
 const firebase_1 = require("../../../config/firebase");
 const libphonenumber_js_1 = require("libphonenumber-js");
-const uuid_1 = require("uuid");
+const crypto_1 = require("crypto");
 // Configuration des codes de vérification
 const EMAIL_CODE_EXPIRY_MINUTES = 10;
 const PHONE_CODE_EXPIRY_MINUTES = 5;
@@ -16,11 +16,14 @@ const CODE_RESEND_DELAY_SECONDS = 60;
 const SESSION_EXPIRY_MINUTES = 30;
 class RegistrationService {
     constructor() {
-        this.init();
+        this.ready = this.init();
     }
     async init() {
         await firebase_1.firebaseInitPromise;
         this.db = firebase_admin_1.default.firestore();
+    }
+    async ensureReady() {
+        await this.ready;
     }
     // Génération d'un code à 6 chiffres
     generateVerificationCode() {
@@ -46,7 +49,7 @@ class RegistrationService {
     }
     // Créer une session d'inscription
     async createUser(data) {
-        const sessionId = (0, uuid_1.v4)();
+        const sessionId = (0, crypto_1.randomUUID)();
         const now = firebase_admin_1.default.firestore.Timestamp.now();
         const session = {
             id: sessionId,
@@ -62,15 +65,21 @@ class RegistrationService {
         await this.db.collection('registration_sessions').doc(sessionId).set(session);
         return sessionId;
     }
-    // Récupérer une session d'inscription
+    // Récupérer une session d'inscription - Méthode publique pour 
+    // core.service.ts
     async getUser(sessionId) {
         const doc = await this.db.collection('registration_sessions').doc(sessionId).get();
         return doc.exists ? doc.data() : null;
     }
     // Mettre à jour une session d'inscription
     async updateUser(sessionId, updates) {
+        // Firestore n'accepte pas `undefined` dans update().
+        // On filtre donc les clés dont la valeur est undefined avant update.
+        const sanitizedEntries = Object.entries(updates)
+            .filter(([, value]) => value !== undefined);
+        const sanitized = Object.fromEntries(sanitizedEntries);
         await this.db.collection('registration_sessions').doc(sessionId).update({
-            ...updates,
+            ...sanitized,
             updatedAt: firebase_admin_1.default.firestore.Timestamp.now(),
         });
     }
@@ -100,7 +109,7 @@ class RegistrationService {
     }
     // Envoyer un SMS de vérification (simulation)
     async sendVerificationSMS(phone, code) {
-        // TODO: Intégrer avec Firebase Extensions SMS ou un service SMS
+        // TODO: Intégrer avec un service SMS (Firebase Extensions SMS ou autre)
         // eslint-disable-next-line no-console
         console.log(`[SMS] Code de vérification pour ${phone}: ${code}`);
         // Simulation d'envoi
@@ -109,6 +118,7 @@ class RegistrationService {
     // FLUX 1: Inscription par email
     async registerWithEmail(request) {
         try {
+            await this.ensureReady();
             const { email } = request;
             if (!email || !this.isValidEmail(email)) {
                 return {
@@ -167,6 +177,7 @@ class RegistrationService {
     // FLUX 2: Inscription via Google
     async registerWithGoogle(request) {
         try {
+            await this.ensureReady();
             const { googleToken } = request;
             if (!googleToken) {
                 return {
@@ -223,6 +234,7 @@ class RegistrationService {
     // Vérification du code email
     async verifyEmail(request) {
         try {
+            await this.ensureReady();
             const { sessionId, code } = request;
             const session = await this.getUser(sessionId);
             if (!session) {
@@ -273,8 +285,8 @@ class RegistrationService {
             await this.updateUser(sessionId, {
                 emailVerified: true,
                 step: 'phone_input',
-                emailVerificationCode: undefined,
-                emailCodeExpiry: undefined,
+                emailVerificationCode: undefined, // sera supprimé par sanitize
+                emailCodeExpiry: undefined, // sera supprimé par sanitize
                 emailAttempts: 0,
             });
             return {
@@ -299,6 +311,7 @@ class RegistrationService {
     // Ajout du numéro de téléphone
     async addPhone(request) {
         try {
+            await this.ensureReady();
             const { sessionId, phone, country, preferredCurrency } = request;
             const session = await this.getUser(sessionId);
             if (!session) {
@@ -390,6 +403,7 @@ class RegistrationService {
     }
     // Vérification finale et création du compte
     async verifyPhone(request) {
+        await this.ensureReady();
         const batch = this.db.batch();
         let createdFirebaseUser = false;
         let firebaseUid;
@@ -462,9 +476,12 @@ class RegistrationService {
                     createdFirebaseUser = true;
                 }
                 // 2. Créer le document utilisateur dans Firestore
-                const userDoc = this.db.collection('users').doc(firebaseUid);
+                // Utiliser le numéro de téléphone comme identifiant du document 
+                // utilisateur
+                const userDocId = session.phone;
+                const userDoc = this.db.collection('users').doc(userDocId);
                 batch.set(userDoc, {
-                    id: firebaseUid,
+                    id: userDocId,
                     email: session.email,
                     phone: session.phone,
                     country: session.country,
@@ -486,6 +503,9 @@ class RegistrationService {
                     step: 'completed',
                     phoneVerified: true,
                     updatedAt: now,
+                    // Persist the Firebase UID so downstream services (core) can 
+                    // link wallet
+                    firebaseUid,
                 });
                 // Exécuter la transaction
                 await batch.commit();
